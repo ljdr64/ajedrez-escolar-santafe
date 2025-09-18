@@ -2,8 +2,12 @@
 
 import { useEffect, useRef } from 'react';
 import { Chessground } from 'chessground';
-import { Chess, Move, Square } from 'chess.js';
 import { Key } from 'chessground/types';
+import { Chess, Move, Square } from 'chess.js';
+
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { RotateCcw, Flag } from 'lucide-react';
 
 import '@/styles/vendor/chessground/assets/chessground.base.css';
 import '@/styles/vendor/chessground/assets/chessground.brown.css';
@@ -74,7 +78,7 @@ const playRandomMove = (
   cg.playPremove();
 };
 
-export default function Board() {
+export function ChessBoard() {
   const boardRef = useRef<HTMLDivElement>(null);
   const gameRef = useRef(new Chess());
   const cgRef = useRef<ReturnType<typeof Chessground> | null>(null);
@@ -139,8 +143,62 @@ export default function Board() {
   }, []);
 
   return (
-    <div className="flex justify-center">
-      <div ref={boardRef} className="cg-board w-[500px] h-[500px]" />
-    </div>
+    <Card>
+      <CardContent className="p-6">
+        <div className="flex flex-col items-center space-y-4">
+          {/* Información del turno */}
+          <div className="flex items-center justify-between w-full max-w-md">
+            <div className="text-sm text-muted-foreground">
+              Turno:{' '}
+              <span className="font-semibold capitalize">
+                {gameRef.current.turn() === 'w' ? 'Blancas' : 'Negras'}
+              </span>
+            </div>
+            <div className="flex space-x-2">
+              <Button variant="outline" size="sm">
+                <RotateCcw className="h-4 w-4 mr-1" />
+                Deshacer
+              </Button>
+              <Button variant="outline" size="sm">
+                <Flag className="h-4 w-4 mr-1" />
+                Tablas
+              </Button>
+            </div>
+          </div>
+
+          {/* Tablero de ajedrez */}
+          <div className="relative">
+            <div className="flex items-center">
+              {/* Coordenadas de filas (8-1) */}
+              <div className="grid grid-rows-8 h-[500px] w-4 mr-1">
+                {[8, 7, 6, 5, 4, 3, 2, 1].map((number) => (
+                  <div
+                    key={number}
+                    className="flex items-center justify-center text-xs text-muted-foreground"
+                  >
+                    {number}
+                  </div>
+                ))}
+              </div>
+
+              {/* Tablero */}
+              <div ref={boardRef} className="cg-board w-[500px] h-[500px]" />
+            </div>
+
+            {/* Coordenadas de columnas (a-h) abajo */}
+            <div className="grid grid-cols-8 w-[500px] ml-5 mt-1">
+              {['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'].map((letter) => (
+                <div
+                  key={letter}
+                  className="flex items-center justify-center text-xs text-muted-foreground"
+                >
+                  {letter}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
