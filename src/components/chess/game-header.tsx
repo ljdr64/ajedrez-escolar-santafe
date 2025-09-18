@@ -1,9 +1,9 @@
-"use client"
+'use client';
 
-import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Crown, Clock, User, Settings } from "lucide-react"
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Crown, Clock, User, Settings } from 'lucide-react';
 
 export function GameHeader() {
   return (
@@ -55,5 +55,5 @@ export function GameHeader() {
         </div>
       </CardContent>
     </Card>
-  )
+  );
 }

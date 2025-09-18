@@ -1,13 +1,13 @@
-"use client"
+'use client';
 
-import Link from "next/link"
-import { Button } from "@/components/ui/button"
-import { ModeToggle } from "@/components/mode-toggle"
-import { Crown, Menu, X } from "lucide-react"
-import { useState } from "react"
+import Link from 'next/link';
+import { Button } from '@/components/ui/button';
+import { ModeToggle } from '@/components/mode-toggle';
+import { Crown, Menu, X } from 'lucide-react';
+import { useState } from 'react';
 
 export function Navbar() {
-  const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   return (
     <nav className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -17,20 +17,33 @@ export function Navbar() {
           <Link href="/" className="flex items-center space-x-2">
             <Crown className="h-8 w-8 text-primary" />
             <div className="flex flex-col">
-              <span className="text-lg font-bold leading-none">Ajedrez Escolar</span>
-              <span className="text-sm text-muted-foreground leading-none">Santa Fe</span>
+              <span className="text-lg font-bold leading-none">
+                Ajedrez Escolar
+              </span>
+              <span className="text-sm text-muted-foreground leading-none">
+                Santa Fe
+              </span>
             </div>
           </Link>
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-6">
-            <Link href="/" className="text-sm font-medium hover:text-primary transition-colors">
+            <Link
+              href="/"
+              className="text-sm font-medium hover:text-primary transition-colors"
+            >
               Inicio
             </Link>
-            <Link href="/play" className="text-sm font-medium hover:text-primary transition-colors">
+            <Link
+              href="/play"
+              className="text-sm font-medium hover:text-primary transition-colors"
+            >
               Jugar
             </Link>
-            <Link href="/tournaments" className="text-sm font-medium hover:text-primary transition-colors">
+            <Link
+              href="/tournaments"
+              className="text-sm font-medium hover:text-primary transition-colors"
+            >
               Torneos
             </Link>
           </div>
@@ -51,8 +64,16 @@ export function Navbar() {
           {/* Mobile Menu Button */}
           <div className="md:hidden flex items-center space-x-2">
             <ModeToggle />
-            <Button variant="ghost" size="sm" onClick={() => setIsMenuOpen(!isMenuOpen)}>
-              {isMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setIsMenuOpen(!isMenuOpen)}
+            >
+              {isMenuOpen ? (
+                <X className="h-5 w-5" />
+              ) : (
+                <Menu className="h-5 w-5" />
+              )}
             </Button>
           </div>
         </div>
@@ -99,5 +120,5 @@ export function Navbar() {
         )}
       </div>
     </nav>
-  )
+  );
 }

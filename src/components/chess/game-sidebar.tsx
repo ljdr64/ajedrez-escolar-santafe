@@ -1,13 +1,19 @@
-"use client"
+'use client';
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { Clock, MessageCircle, BookOpen, BarChart3 } from "lucide-react"
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Clock, MessageCircle, BookOpen, BarChart3 } from 'lucide-react';
 
 export function GameSidebar() {
-  const moves = ["1. e4 e5", "2. Nf3 Nc6", "3. Bb5 a6", "4. Ba4 Nf6", "5. O-O Be7"]
+  const moves = [
+    '1. e4 e5',
+    '2. Nf3 Nc6',
+    '3. Bb5 a6',
+    '4. Ba4 Nf6',
+    '5. O-O Be7',
+  ];
 
   return (
     <div className="space-y-4">
@@ -42,7 +48,10 @@ export function GameSidebar() {
           <ScrollArea className="h-32">
             <div className="space-y-1">
               {moves.map((move, index) => (
-                <div key={index} className="text-sm font-mono p-2 hover:bg-muted rounded cursor-pointer">
+                <div
+                  key={index}
+                  className="text-sm font-mono p-2 hover:bg-muted rounded cursor-pointer"
+                >
                   {move}
                 </div>
               ))}
@@ -82,16 +91,24 @@ export function GameSidebar() {
           <CardTitle className="text-lg">Herramientas</CardTitle>
         </CardHeader>
         <CardContent className="space-y-2">
-          <Button variant="outline" size="sm" className="w-full justify-start bg-transparent">
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full justify-start bg-transparent"
+          >
             <BookOpen className="h-4 w-4 mr-2" />
             Análisis
           </Button>
-          <Button variant="outline" size="sm" className="w-full justify-start bg-transparent">
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full justify-start bg-transparent"
+          >
             <BarChart3 className="h-4 w-4 mr-2" />
             Estadísticas
           </Button>
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Chessground } from 'chessground';
 import { Key } from 'chessground/types';
 import { Chess, Move, Square } from 'chess.js';
@@ -8,10 +8,18 @@ import { Chess, Move, Square } from 'chess.js';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { RotateCcw, Flag } from 'lucide-react';
+import { PromotionChoice } from './promotion-choice';
 
 import '@/styles/vendor/chessground/assets/chessground.base.css';
 import '@/styles/vendor/chessground/assets/chessground.brown.css';
 import '@/styles/vendor/chessground/assets/chessground.cburnett.css';
+import '@/styles/promotion.css';
+
+type PendingPromotion = {
+  from: string;
+  to: string;
+  color: 'w' | 'b';
+};
 
 const buildDests = (game: Chess): Map<Key, Key[]> => {
   const map = new Map<Key, Key[]>();
@@ -84,7 +92,72 @@ export function ChessBoard() {
   const cgRef = useRef<ReturnType<typeof Chessground> | null>(null);
   const startedRef = useRef(false);
 
+  const [pending, setPending] = useState<PendingPromotion | null>(null);
+  const [turn, setTurn] = useState<'w' | 'b'>(gameRef.current.turn());
+
   const dests = buildDests(gameRef.current);
+
+  const roleMap: Record<
+    'p' | 'k' | 'q' | 'r' | 'b' | 'n',
+    'pawn' | 'king' | 'queen' | 'rook' | 'bishop' | 'knight'
+  > = {
+    p: 'pawn',
+    k: 'king',
+    q: 'queen',
+    r: 'rook',
+    b: 'bishop',
+    n: 'knight',
+  };
+  const colorMap: Record<'w' | 'b', 'white' | 'black'> = {
+    w: 'white',
+    b: 'black',
+  };
+
+  const confirmPromotion = (
+    cg: ReturnType<typeof Chessground> | null,
+    e: React.MouseEvent<HTMLDivElement>,
+    role: 'q' | 'r' | 'b' | 'n'
+  ) => {
+    e.stopPropagation();
+    if (!pending || !cg) return;
+    gameRef.current.move({
+      from: pending.from,
+      to: pending.to,
+      promotion: role,
+    });
+    cg.set({ fen: gameRef.current.fen(), check: gameRef.current.isCheck() });
+    setPending(null);
+
+    setTimeout(() => playRandomMove(gameRef.current, cg, 'black'), 1000);
+  };
+
+  const cancelPromotion = (cg: ReturnType<typeof Chessground> | null) => {
+    if (!pending || !cg) return;
+
+    const pieces = new Map();
+
+    const colorPiece = colorMap[pending.color];
+    pieces.set(pending.from, { role: 'pawn', color: colorPiece });
+
+    const captured = gameRef.current.get(pending.to as Square);
+    if (captured) {
+      const colorCaptured = colorMap[captured.color as 'w' | 'b'];
+      const roleCaptured = roleMap[captured.type as 'q' | 'r' | 'b' | 'n'];
+      pieces.set(pending.to, {
+        color: colorCaptured,
+        role: roleCaptured,
+      });
+    } else {
+      pieces.set(pending.to, null);
+    }
+    cg.setPieces(pieces);
+    cg.set({
+      turnColor: gameRef.current.turn() === 'w' ? 'white' : 'black',
+      movable: { dests: buildDests(gameRef.current) },
+      lastMove: [],
+    });
+    setPending(null);
+  };
 
   useEffect(() => {
     if (startedRef.current) return;
@@ -108,8 +181,18 @@ export function ChessBoard() {
       },
       events: {
         move: (orig: string, dest: string) => {
-          if (gameRef.current.turn() === 'w') {
-            const piece = gameRef.current.get(orig as Square);
+          if (game.turn() === 'w') {
+            const piece = game.get(orig as Square);
+            if (piece?.type === 'p') {
+              const rank = dest[1];
+              if (
+                (piece.color === 'w' && rank === '8') ||
+                (piece.color === 'b' && rank === '1')
+              ) {
+                setPending({ from: orig, to: dest, color: piece.color });
+                return;
+              }
+            }
 
             if (piece?.type === 'k') {
               const castleMap: Record<string, Record<string, string>> = {
@@ -139,6 +222,7 @@ export function ChessBoard() {
 
     return () => {
       cg.destroy();
+      startedRef.current = false;
     };
   }, []);
 
@@ -151,7 +235,7 @@ export function ChessBoard() {
             <div className="text-sm text-muted-foreground">
               Turno:{' '}
               <span className="font-semibold capitalize">
-                {gameRef.current.turn() === 'w' ? 'Blancas' : 'Negras'}
+                {turn === 'w' ? 'Blancas' : 'Negras'}
               </span>
             </div>
             <div className="flex space-x-2">
@@ -169,32 +253,19 @@ export function ChessBoard() {
           {/* Tablero de ajedrez */}
           <div className="relative">
             <div className="flex items-center">
-              {/* Coordenadas de filas (8-1) */}
-              <div className="grid grid-rows-8 h-[500px] w-4 mr-1">
-                {[8, 7, 6, 5, 4, 3, 2, 1].map((number) => (
-                  <div
-                    key={number}
-                    className="flex items-center justify-center text-xs text-muted-foreground"
-                  >
-                    {number}
-                  </div>
-                ))}
-              </div>
-
               {/* Tablero */}
-              <div ref={boardRef} className="cg-board w-[500px] h-[500px]" />
-            </div>
-
-            {/* Coordenadas de columnas (a-h) abajo */}
-            <div className="grid grid-cols-8 w-[500px] ml-5 mt-1">
-              {['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'].map((letter) => (
-                <div
-                  key={letter}
-                  className="flex items-center justify-center text-xs text-muted-foreground"
-                >
-                  {letter}
-                </div>
-              ))}
+              <div>
+                <div ref={boardRef} className="cg-board w-[500px] h-[500px]" />
+                {pending && (
+                  <PromotionChoice
+                    pending={pending}
+                    orientation={cgRef.current?.state.orientation ?? 'white'}
+                    cg={cgRef.current}
+                    cancelPromotion={cancelPromotion}
+                    confirmPromotion={confirmPromotion}
+                  />
+                )}
+              </div>
             </div>
           </div>
         </div>

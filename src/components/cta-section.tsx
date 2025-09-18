@@ -1,7 +1,7 @@
-import Link from "next/link"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
-import { Crown, ArrowRight } from "lucide-react"
+import Link from 'next/link';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Crown, ArrowRight } from 'lucide-react';
 
 export function CTASection() {
   return (
@@ -20,10 +20,13 @@ export function CTASection() {
               </div>
 
               <div className="space-y-4">
-                <h2 className="text-3xl md:text-5xl font-bold text-balance">Registrate gratis y empezá a jugar</h2>
+                <h2 className="text-3xl md:text-5xl font-bold text-balance">
+                  Registrate gratis y empezá a jugar
+                </h2>
                 <p className="text-xl md:text-2xl text-muted-foreground text-pretty">
-                  Únete a la comunidad de ajedrez escolar más grande de Santa Fe. Participa en partidas y torneos online
-                  con estudiantes de toda la provincia.
+                  Únete a la comunidad de ajedrez escolar más grande de Santa
+                  Fe. Participa en partidas y torneos online con estudiantes de
+                  toda la provincia.
                 </p>
               </div>
 
@@ -35,19 +38,26 @@ export function CTASection() {
                   </Button>
                 </Link>
                 <Link href="/play">
-                  <Button variant="outline" size="lg" className="text-lg px-8 py-6 h-auto bg-transparent">
+                  <Button
+                    variant="outline"
+                    size="lg"
+                    className="text-lg px-8 py-6 h-auto bg-transparent"
+                  >
                     Jugar como invitado
                   </Button>
                 </Link>
               </div>
 
               <div className="pt-8 text-sm text-muted-foreground">
-                <p>✓ Registro gratuito • ✓ Sin publicidad • ✓ Supervisión educativa</p>
+                <p>
+                  ✓ Registro gratuito • ✓ Sin publicidad • ✓ Supervisión
+                  educativa
+                </p>
               </div>
             </div>
           </CardContent>
         </Card>
       </div>
     </section>
-  )
+  );
 }

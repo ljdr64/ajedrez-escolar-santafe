@@ -1,6 +1,6 @@
-import { TournamentHeader } from "@/components/tournaments/tournament-header"
-import { TournamentFilters } from "@/components/tournaments/tournament-filters"
-import { TournamentGrid } from "@/components/tournaments/tournament-grid"
+import { TournamentHeader } from '@/components/tournaments/tournament-header';
+import { TournamentFilters } from '@/components/tournaments/tournament-filters';
+import { TournamentGrid } from '@/components/tournaments/tournament-grid';
 
 export default function TournamentsPage() {
   return (
@@ -11,5 +11,5 @@ export default function TournamentsPage() {
         <TournamentGrid />
       </div>
     </div>
-  )
+  );
 }
