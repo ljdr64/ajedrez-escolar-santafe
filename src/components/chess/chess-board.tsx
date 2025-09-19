@@ -94,6 +94,7 @@ export function ChessBoard() {
 
   const [pending, setPending] = useState<PendingPromotion | null>(null);
   const [turn, setTurn] = useState<'w' | 'b'>(gameRef.current.turn());
+  const [renderTrigger, setRenderTrigger] = useState(false);
 
   const dests = buildDests(gameRef.current);
 
@@ -239,9 +240,16 @@ export function ChessBoard() {
               </span>
             </div>
             <div className="flex space-x-2">
-              <Button variant="outline" size="sm">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  cgRef.current?.toggleOrientation();
+                  setRenderTrigger((prev) => !prev);
+                }}
+              >
                 <RotateCcw className="h-4 w-4 mr-1" />
-                Deshacer
+                Rotar
               </Button>
               <Button variant="outline" size="sm">
                 <Flag className="h-4 w-4 mr-1" />
@@ -258,6 +266,7 @@ export function ChessBoard() {
                 <div ref={boardRef} className="cg-board w-[500px] h-[500px]" />
                 {pending && (
                   <PromotionChoice
+                    key={Number(renderTrigger)}
                     pending={pending}
                     orientation={cgRef.current?.state.orientation ?? 'white'}
                     cg={cgRef.current}
