@@ -1,10 +1,17 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Users, Cpu } from 'lucide-react';
-import { useRouter } from 'next/navigation';
 
 const presets = [
   { label: '1+0', limit: 60, increment: 0 },
@@ -21,7 +28,9 @@ const presets = [
 export default function PlayPage() {
   const router = useRouter();
   const [mode, setMode] = useState<'friend' | 'ai'>('friend');
-  const [selectedPreset, setSelectedPreset] = useState(presets[0]);
+  const [selectedPreset, setSelectedPreset] = useState(presets[4]);
+  const [waiting, setWaiting] = useState(false);
+  const [challengeId, setChallengeId] = useState<string | null>(null);
 
   const startGame = () => {
     // const res = await fetch('/api/lichess/start', {
@@ -39,8 +48,8 @@ export default function PlayPage() {
     //   console.error('Error creando partida:', data.error || data);
     //   return;
     // }
-
-    router.push(`/play/aaaaaaaa`);
+    setChallengeId('dummyChallengeId123');
+    setWaiting(true);
   };
 
   return (
@@ -90,6 +99,37 @@ export default function PlayPage() {
           </div>
         </CardContent>
       </Card>
+
+      <Dialog open={waiting} onOpenChange={setWaiting}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Esperando al rival…</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-gray-500 mt-2">
+            Challenge ID: <span className="font-semibold">{challengeId}</span>
+            <br />
+            Modo:{' '}
+            <span className="font-semibold capitalize">
+              {mode === 'friend' ? 'Amigos' : 'IA'}
+            </span>
+            <br />
+            Tiempo:{' '}
+            <span className="font-semibold">{selectedPreset.label}</span>
+          </p>
+          <div className="flex justify-end mt-4">
+            <Button
+              variant="destructive"
+              onClick={() => {
+                setWaiting(false);
+                setChallengeId(null);
+              }}
+              className="cursor-pointer"
+            >
+              Cancelar reto
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
