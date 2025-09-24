@@ -81,17 +81,17 @@ const playRandomMove = (
     check: game.isCheck(),
     turnColor: game.turn() === 'w' ? 'white' : 'black',
     movable: { dests: buildDests(game) },
+    lastMove: [random.from, random.to],
   });
 
   cg.playPremove();
 };
 
 type Props = {
-  gameId: string;
-  player: '1' | '2';
+  playerColor: 'white' | 'black';
 };
 
-export function ChessBoard({ gameId, player }: Props) {
+export function ChessBoardAI({ playerColor }: Props) {
   const boardRef = useRef<HTMLDivElement>(null);
   const gameRef = useRef(new Chess());
   const cgRef = useRef<ReturnType<typeof Chessground> | null>(null);
@@ -102,7 +102,7 @@ export function ChessBoard({ gameId, player }: Props) {
   const [renderTrigger, setRenderTrigger] = useState(false);
 
   const dests = buildDests(gameRef.current);
-  const playerColor = player === '1' ? 'white' : 'black';
+  const opponentColor = playerColor === 'white' ? 'black' : 'white';
 
   const roleMap: Record<
     'p' | 'k' | 'q' | 'r' | 'b' | 'n',
@@ -131,18 +131,6 @@ export function ChessBoard({ gameId, player }: Props) {
       from: pending.from,
       to: pending.to,
       promotion: role,
-    });
-
-    const uci = pending.from + pending.to + role;
-
-    await fetch('/api/lichess/move', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        gameId,
-        move: uci,
-        playerColor,
-      }),
     });
 
     cg.set({ fen: gameRef.current.fen(), check: gameRef.current.isCheck() });
@@ -200,7 +188,7 @@ export function ChessBoard({ gameId, player }: Props) {
         showDests: true,
       },
       events: {
-        move: async (orig: string, dest: string) => {
+        move: (orig: string, dest: string) => {
           if (game.turn() === playerColor[0]) {
             const piece = game.get(orig as Square);
             if (piece?.type === 'p') {
@@ -225,28 +213,22 @@ export function ChessBoard({ gameId, player }: Props) {
               }
             }
 
-            const uci = orig + dest;
-
-            await fetch('/api/lichess/move', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                gameId,
-                move: uci,
-                playerColor,
-              }),
-            });
-
             game.move({ from: orig, to: dest });
             cg.set({
               fen: game.fen(),
               check: game.isCheck(),
               movable: { dests },
             });
+
+            setTimeout(() => playRandomMove(game, cg, opponentColor), 1000);
           }
         },
       },
     });
+
+    if (opponentColor === 'white' && game.moveNumber() === 1) {
+      setTimeout(() => playRandomMove(game, cg, opponentColor), 1000);
+    }
 
     cgRef.current = cg;
 
@@ -255,28 +237,6 @@ export function ChessBoard({ gameId, player }: Props) {
       startedRef.current = false;
     };
   }, []);
-
-  useEffect(() => {
-    if (!gameId) return;
-
-    const es = new EventSource(`/api/lichess/stream/${gameId}`);
-
-    es.onmessage = (event) => {
-      if (!event.data) return;
-
-      const data = JSON.parse(event.data);
-
-      if (data.type === 'gameFull') {
-        console.log('[FULL]', data);
-      }
-
-      if (data.type === 'gameState') {
-        console.log('[STATE]', data);
-      }
-    };
-
-    return () => es.close();
-  }, [gameId]);
 
   return (
     <Card>

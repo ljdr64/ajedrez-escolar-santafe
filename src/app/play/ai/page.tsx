@@ -1,23 +1,14 @@
-import { ChessBoard } from '@/components/chess/chess-board';
+import { ChessBoardAI } from '@/components/chess/chess-board-ai';
 import { GameSidebar } from '@/components/chess/game-sidebar';
 import { GameHeader } from '@/components/chess/game-header';
 
-export default function PlayPage({
-  params,
-  searchParams,
-}: {
-  params: { id: string };
-  searchParams?: { user?: '1' | '2' };
-}) {
-  const { id } = params;
-  const user = searchParams?.user ?? '1';
-
+export default function PlayVsAIPage() {
   return (
     <div className="container mx-auto px-4 py-6">
       <GameHeader />
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mt-6">
         <div className="lg:col-span-3">
-          <ChessBoard gameId={id} player={user} />
+          <ChessBoardAI playerColor={'white'} />
         </div>
         <div className="lg:col-span-1">
           <GameSidebar />

@@ -1,9 +1,12 @@
 import { NextResponse } from 'next/server';
 
-export async function POST(req: Request) {
+export async function POST(
+  req: Request,
+  { params }: { params: { id: string } }
+) {
   try {
-    const { opponent, limit, increment, color, rated, player } =
-      await req.json();
+    const { id } = params;
+    const { player } = await req.json();
 
     const token =
       player === '1' ? process.env.LICHESS_TOKEN1 : process.env.LICHESS_TOKEN2;
@@ -15,39 +18,30 @@ export async function POST(req: Request) {
       );
     }
 
-    const res = await fetch(`https://lichess.org/api/challenge/${opponent}`, {
+    const res = await fetch(`https://lichess.org/api/challenge/${id}/accept`, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        rated: rated ?? false,
-        color: color ?? 'random',
-        clock: {
-          limit: limit ?? 300,
-          increment: increment ?? 0,
-        },
-        variant: 'standard',
-      }),
     });
 
     const data = await res.json();
+    console.log('Lichess accept response', data);
 
     if (!res.ok || !data.id) {
       return NextResponse.json(
-        { error: 'Challenge no creado', raw: data },
+        { error: 'Error aceptando challenge', raw: data },
         { status: res.status }
       );
     }
 
     return NextResponse.json({
-      challengeId: data.id,
+      gameId: data.id,
       url: data.url,
       status: data.status,
     });
   } catch (err) {
-    console.error('Error en challenge:', err);
+    console.error('Error en accept:', err);
     return NextResponse.json(
       { error: 'Internal Server Error', raw: String(err) },
       { status: 500 }

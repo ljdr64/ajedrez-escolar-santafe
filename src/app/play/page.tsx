@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -27,33 +27,78 @@ const presets = [
 
 export default function PlayPage() {
   const router = useRouter();
+  const params = useSearchParams();
+  const user = params.get('user') ?? '1';
+  const challengeId = params.get('id');
+
   const [mode, setMode] = useState<'friend' | 'ai'>('friend');
   const [selectedPreset, setSelectedPreset] = useState(presets[4]);
   const [waiting, setWaiting] = useState(false);
-  const [challengeId, setChallengeId] = useState<string | null>(null);
 
-  const startGame = () => {
-    // const res = await fetch('/api/lichess/start', {
-    //   method: 'POST',
-    //   headers: { 'Content-Type': 'application/json' },
-    //   body: JSON.stringify({
-    //     limit: selectedPreset.limit,
-    //     increment: selectedPreset.increment,
-    //   }),
-    // });
+  const startGameAI = () => {
+    router.push('/play/ai');
+  };
 
-    // const data = await res.json();
+  const startGame = async () => {
+    try {
+      const res = await fetch('/api/lichess/start', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          opponent: process.env.NEXT_PUBLIC_LICHESS_USER2,
+          limit: selectedPreset.limit,
+          increment: selectedPreset.increment,
+          player: user,
+        }),
+      });
 
-    // if (!data.gameId) {
-    //   console.error('Error creando partida:', data.error || data);
-    //   return;
-    // }
-    setChallengeId('dummyChallengeId123');
-    setWaiting(true);
+      const data = await res.json();
+      console.log('startGame response', data);
+      if (!res.ok) throw new Error(data.error || 'Error creando challenge');
+
+      router.push(`/play/${data.challengeId}?user=${user}`);
+    } catch (err) {
+      console.error('startGame error:', err);
+    }
+  };
+
+  const acceptChallenge = async () => {
+    if (!challengeId) return;
+
+    try {
+      const res = await fetch(`/api/lichess/accept/${challengeId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ player: user }),
+      });
+
+      const data = await res.json();
+      console.log('acceptChallenge response', data);
+
+      if (!res.ok) throw new Error(data.error || 'Error aceptando challenge');
+
+      router.push(`/play/${challengeId}?user=${user}`);
+    } catch (err) {
+      console.error('acceptChallenge error:', err);
+    }
   };
 
   return (
     <div className="container mx-auto px-4 py-12 max-w-lg space-y-4 min-w-[320px]">
+      {challengeId && user === '2' && (
+        <Card>
+          <CardContent className="p-2 flex justify-center">
+            <Button
+              size="lg"
+              variant="default"
+              onClick={acceptChallenge}
+              className="h-15 sm:h-20 w-full sm:w-60 text-xl sm:text-2xl cursor-pointer bg-green-600 hover:bg-green-700 text-white"
+            >
+              Aceptar reto
+            </Button>
+          </CardContent>
+        </Card>
+      )}
       <Card>
         <CardContent className="p-6 flex justify-center gap-4">
           <Button
@@ -91,7 +136,7 @@ export default function PlayPage() {
           <div className="flex justify-center">
             <Button
               size="lg"
-              onClick={startGame}
+              onClick={mode === 'ai' ? startGameAI : startGame}
               className="h-15 sm:h-20 w-30 sm:w-40 text-xl sm:text-2xl cursor-pointer"
             >
               Jugar
@@ -121,7 +166,6 @@ export default function PlayPage() {
               variant="destructive"
               onClick={() => {
                 setWaiting(false);
-                setChallengeId(null);
               }}
               className="cursor-pointer"
             >
