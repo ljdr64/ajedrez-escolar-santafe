@@ -86,7 +86,12 @@ const playRandomMove = (
   cg.playPremove();
 };
 
-export function ChessBoard() {
+type Props = {
+  gameId: string;
+  player: '1' | '2';
+};
+
+export function ChessBoard({ gameId, player }: Props) {
   const boardRef = useRef<HTMLDivElement>(null);
   const gameRef = useRef(new Chess());
   const cgRef = useRef<ReturnType<typeof Chessground> | null>(null);
@@ -97,6 +102,7 @@ export function ChessBoard() {
   const [renderTrigger, setRenderTrigger] = useState(false);
 
   const dests = buildDests(gameRef.current);
+  const playerColor = player === '1' ? 'white' : 'black';
 
   const roleMap: Record<
     'p' | 'k' | 'q' | 'r' | 'b' | 'n',
@@ -114,7 +120,7 @@ export function ChessBoard() {
     b: 'black',
   };
 
-  const confirmPromotion = (
+  const confirmPromotion = async (
     cg: ReturnType<typeof Chessground> | null,
     e: React.MouseEvent<HTMLDivElement>,
     role: 'q' | 'r' | 'b' | 'n'
@@ -126,6 +132,19 @@ export function ChessBoard() {
       to: pending.to,
       promotion: role,
     });
+
+    const uci = pending.from + pending.to + role;
+
+    await fetch('/api/lichess/move', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        gameId,
+        move: uci,
+        playerColor,
+      }),
+    });
+
     cg.set({ fen: gameRef.current.fen(), check: gameRef.current.isCheck() });
     setPending(null);
 
@@ -170,10 +189,10 @@ export function ChessBoard() {
 
     const cg = Chessground(boardRef.current, {
       coordinates: true,
-      orientation: 'white',
+      orientation: playerColor,
       movable: {
         free: false,
-        color: 'white',
+        color: playerColor,
         dests,
       },
       premovable: {
@@ -181,8 +200,8 @@ export function ChessBoard() {
         showDests: true,
       },
       events: {
-        move: (orig: string, dest: string) => {
-          if (game.turn() === 'w') {
+        move: async (orig: string, dest: string) => {
+          if (game.turn() === playerColor[0]) {
             const piece = game.get(orig as Square);
             if (piece?.type === 'p') {
               const rank = dest[1];
@@ -206,14 +225,26 @@ export function ChessBoard() {
               }
             }
 
-            game.move({ from: orig, to: dest, promotion: 'q' });
+            const uci = orig + dest;
+
+            await fetch('/api/lichess/move', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                gameId,
+                move: uci,
+                playerColor,
+              }),
+            });
+
+            game.move({ from: orig, to: dest });
             cg.set({
               fen: game.fen(),
               check: game.isCheck(),
               movable: { dests },
             });
 
-            setTimeout(() => playRandomMove(game, cg, 'black'), 1000);
+            // setTimeout(() => playRandomMove(game, cg, 'black'), 1000);
           }
         },
       },
@@ -226,6 +257,39 @@ export function ChessBoard() {
       startedRef.current = false;
     };
   }, []);
+
+  useEffect(() => {
+    if (!gameId) return;
+    const es = new EventSource(`/api/lichess/stream/${gameId}`);
+
+    es.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      console.log('Respuesta de Lichess:', data);
+      if (data.type === 'gameFull') {
+      }
+
+      if (data.type === 'gameState') {
+        const moves = data.moves.split(' ');
+        const lastMove = moves[moves.length - 1];
+
+        const from = lastMove.slice(0, 2);
+        const to = lastMove.slice(2, 4);
+        const promotion = lastMove.length === 5 ? lastMove[4] : null;
+
+        gameRef.current.move({
+          from,
+          to,
+          promotion: promotion ?? undefined,
+        });
+
+        cgRef.current?.move(from, to);
+
+        console.log('última jugada:', { from, to, promotion });
+      }
+    };
+
+    return () => es.close();
+  }, [gameId]);
 
   return (
     <Card>

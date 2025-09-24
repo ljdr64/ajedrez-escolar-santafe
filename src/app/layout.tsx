@@ -13,7 +13,6 @@ export const metadata: Metadata = {
   title: 'Ajedrez Escolar Santa Fe',
   description:
     'Plataforma oficial de ajedrez escolar de la provincia de Santa Fe',
-  generator: 'v0.app',
 };
 
 export default function RootLayout({
