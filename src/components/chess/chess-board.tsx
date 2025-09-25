@@ -63,29 +63,6 @@ const buildDests = (game: Chess): Map<Key, Key[]> => {
   return map;
 };
 
-const playRandomMove = (
-  game: Chess,
-  cg: ReturnType<typeof Chessground>,
-  color: 'white' | 'black'
-) => {
-  if (game.turn() !== color[0]) return;
-
-  const moves = game.moves({ verbose: true }) as Move[];
-  if (moves.length === 0) return;
-
-  const random = moves[Math.floor(Math.random() * moves.length)];
-  game.move(random);
-
-  cg.set({
-    fen: game.fen(),
-    check: game.isCheck(),
-    turnColor: game.turn() === 'w' ? 'white' : 'black',
-    movable: { dests: buildDests(game) },
-  });
-
-  cg.playPremove();
-};
-
 type Props = {
   gameId: string;
   player: '1' | '2';
@@ -103,6 +80,7 @@ export function ChessBoard({ gameId, player }: Props) {
 
   const dests = buildDests(gameRef.current);
   const playerColor = player === '1' ? 'white' : 'black';
+  const opponentColor = playerColor === 'white' ? 'black' : 'white';
 
   const roleMap: Record<
     'p' | 'k' | 'q' | 'r' | 'b' | 'n',
@@ -120,6 +98,31 @@ export function ChessBoard({ gameId, player }: Props) {
     b: 'black',
   };
 
+  const sendMove = async (
+    gameId: string,
+    from: string,
+    to: string,
+    role?: string,
+    player?: '1' | '2'
+  ) => {
+    const uci = from + to + (role ?? '');
+
+    try {
+      const res = await fetch(`/api/lichess/move/${gameId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ move: uci, user: player }),
+      });
+
+      const data = await res.json();
+      console.log('move response', data);
+
+      if (!res.ok) throw new Error(data.error || 'Error enviando movimiento');
+    } catch (err) {
+      console.error('sendMove error:', err);
+    }
+  };
+
   const confirmPromotion = async (
     cg: ReturnType<typeof Chessground> | null,
     e: React.MouseEvent<HTMLDivElement>,
@@ -133,22 +136,10 @@ export function ChessBoard({ gameId, player }: Props) {
       promotion: role,
     });
 
-    const uci = pending.from + pending.to + role;
-
-    await fetch('/api/lichess/move', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        gameId,
-        move: uci,
-        playerColor,
-      }),
-    });
+    await sendMove(gameId, pending.from, pending.to, role, player);
 
     cg.set({ fen: gameRef.current.fen(), check: gameRef.current.isCheck() });
     setPending(null);
-
-    setTimeout(() => playRandomMove(gameRef.current, cg, 'black'), 1000);
   };
 
   const cancelPromotion = (cg: ReturnType<typeof Chessground> | null) => {
@@ -225,17 +216,7 @@ export function ChessBoard({ gameId, player }: Props) {
               }
             }
 
-            const uci = orig + dest;
-
-            await fetch('/api/lichess/move', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                gameId,
-                move: uci,
-                playerColor,
-              }),
-            });
+            await sendMove(gameId, orig, dest, undefined, player);
 
             game.move({ from: orig, to: dest });
             cg.set({
@@ -259,12 +240,12 @@ export function ChessBoard({ gameId, player }: Props) {
   useEffect(() => {
     if (!gameId) return;
 
-    const es = new EventSource(`/api/lichess/stream/${gameId}`);
+    const es = new EventSource(`/api/lichess/stream/${gameId}?user=${player}`);
 
-    es.onmessage = (event) => {
+    es.addEventListener('message', (event) => {
       if (!event.data) return;
-
       const data = JSON.parse(event.data);
+      console.log('[STREAM]', data);
 
       if (data.type === 'gameFull') {
         console.log('[FULL]', data);
@@ -272,11 +253,33 @@ export function ChessBoard({ gameId, player }: Props) {
 
       if (data.type === 'gameState') {
         console.log('[STATE]', data);
+
+        if (gameRef.current.turn() === opponentColor[0]) {
+          const moves = (data.moves as string).trim().split(' ');
+          const lastUci = moves[moves.length - 1];
+          if (!lastUci) return;
+
+          const from = lastUci.slice(0, 2);
+          const to = lastUci.slice(2, 4);
+          const promotion = lastUci.length === 5 ? lastUci[4] : undefined;
+
+          gameRef.current.move({ from, to, promotion });
+
+          cgRef.current?.set({
+            fen: gameRef.current.fen(),
+            check: gameRef.current.isCheck(),
+            turnColor: gameRef.current.turn() === 'w' ? 'white' : 'black',
+            movable: { dests: buildDests(gameRef.current) },
+            lastMove: [from as Key, to as Key],
+          });
+
+          cgRef.current?.playPremove();
+        }
       }
-    };
+    });
 
     return () => es.close();
-  }, [gameId]);
+  }, [gameId, player]);
 
   return (
     <Card>

@@ -6,7 +6,7 @@ export async function POST(
 ) {
   try {
     const { id } = await options.params;
-    const { user } = await req.json();
+    const { move, user } = await req.json();
 
     const token =
       user === '1' ? process.env.LICHESS_TOKEN1 : process.env.LICHESS_TOKEN2;
@@ -18,12 +18,13 @@ export async function POST(
       );
     }
 
-    const res = await fetch(`https://lichess.org/api/challenge/${id}/accept`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
+    const res = await fetch(
+      `https://lichess.org/api/board/game/${id}/move/${move}`,
+      {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      }
+    );
 
     const data = await res.json();
 
@@ -33,8 +34,9 @@ export async function POST(
 
     return NextResponse.json(data);
   } catch (err: any) {
+    console.error('move error', err);
     return NextResponse.json(
-      { error: err.message || 'Error aceptando challenge' },
+      { error: err.message || 'Error enviando movimiento' },
       { status: 500 }
     );
   }

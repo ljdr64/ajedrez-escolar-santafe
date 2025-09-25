@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
 import { Card, CardContent } from '@/components/ui/card';
@@ -46,6 +46,7 @@ export default function PlayPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           opponent: process.env.NEXT_PUBLIC_LICHESS_USER2,
+          color: 'white',
           limit: selectedPreset.limit,
           increment: selectedPreset.increment,
           player: user,
@@ -55,6 +56,9 @@ export default function PlayPage() {
       const data = await res.json();
       console.log('startGame response', data);
       if (!res.ok) throw new Error(data.error || 'Error creando challenge');
+
+      const channel = new BroadcastChannel('lichess-channel');
+      channel.postMessage({ newChallengeId: data.challengeId });
 
       router.push(`/play/${data.challengeId}?user=${user}`);
     } catch (err) {
@@ -69,19 +73,35 @@ export default function PlayPage() {
       const res = await fetch(`/api/lichess/accept/${challengeId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ player: user }),
+        body: JSON.stringify({ user }),
       });
 
       const data = await res.json();
       console.log('acceptChallenge response', data);
 
-      if (!res.ok) throw new Error(data.error || 'Error aceptando challenge');
+      if (res.ok) {
+        const channel = new BroadcastChannel('lichess-channel');
+        channel.close();
 
-      router.push(`/play/${challengeId}?user=${user}`);
+        router.push(`/play/${challengeId}?user=${user}`);
+      }
     } catch (err) {
       console.error('acceptChallenge error:', err);
     }
   };
+
+  useEffect(() => {
+    const channel = new BroadcastChannel('lichess-channel');
+
+    channel.onmessage = (event) => {
+      if (event.data.newChallengeId && user === '2') {
+        console.log('Challenge recibido:', event.data.newChallengeId);
+        router.push(`/play?id=${event.data.newChallengeId}&user=2`);
+      }
+    };
+
+    return () => channel.close();
+  }, [router, user]);
 
   return (
     <div className="container mx-auto px-4 py-12 max-w-lg space-y-4 min-w-[320px]">

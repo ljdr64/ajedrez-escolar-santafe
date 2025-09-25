@@ -2,8 +2,17 @@ import { NextResponse } from 'next/server';
 
 export async function POST(req: Request) {
   try {
-    const { opponent, limit, increment } = await req.json();
-    const token = process.env.LICHESS_TOKEN!;
+    const { opponent, limit, increment, player } = await req.json();
+
+    const token =
+      player === '1' ? process.env.LICHESS_TOKEN1 : process.env.LICHESS_TOKEN2;
+
+    if (!token) {
+      return NextResponse.json(
+        { error: 'Token no configurado' },
+        { status: 500 }
+      );
+    }
 
     const res = await fetch(`https://lichess.org/api/challenge/${opponent}`, {
       method: 'POST',
@@ -13,7 +22,7 @@ export async function POST(req: Request) {
       },
       body: JSON.stringify({
         rated: false,
-        color: 'white',
+        color: player === '1' ? 'white' : 'black',
         time: { limit, increment },
       }),
     });
