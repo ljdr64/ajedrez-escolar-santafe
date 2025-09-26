@@ -5,6 +5,8 @@ import { Chessground } from 'chessground';
 import { Key } from 'chessground/types';
 import { Chess, Move, Square } from 'chess.js';
 
+import { ablyClient } from '@/lib/ablyClient';
+
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { RotateCcw, Flag } from 'lucide-react';
@@ -66,9 +68,10 @@ const buildDests = (game: Chess): Map<Key, Key[]> => {
 type Props = {
   gameId: string;
   player: '1' | '2';
+  stream?: 'ably' | 'lichess';
 };
 
-export function ChessBoard({ gameId, player }: Props) {
+export function ChessBoard({ gameId, player, stream = 'lichess' }: Props) {
   const boardRef = useRef<HTMLDivElement>(null);
   const gameRef = useRef(new Chess());
   const cgRef = useRef<ReturnType<typeof Chessground> | null>(null);
@@ -117,7 +120,15 @@ export function ChessBoard({ gameId, player }: Props) {
       const data = await res.json();
       console.log('move response', data);
 
-      if (!res.ok) throw new Error(data.error || 'Error enviando movimiento');
+      if (!res.ok) {
+        throw new Error(data.error || 'Error enviando movimiento');
+      }
+      if (stream === 'ably') {
+        await ablyClient.channels.get(`game:${gameId}`).publish('move', {
+          uci,
+          ts: Date.now(),
+        });
+      }
     } catch (err) {
       console.error('sendMove error:', err);
     }
@@ -240,46 +251,78 @@ export function ChessBoard({ gameId, player }: Props) {
   useEffect(() => {
     if (!gameId) return;
 
-    const es = new EventSource(`/api/lichess/stream/${gameId}?user=${player}`);
+    if (stream === 'ably') {
+      const channel = ablyClient.channels.get(`game:${gameId}`);
+      channel.subscribe('move', (msg) => {
+        console.log('📩 recibido en Ably:', msg.data);
 
-    es.addEventListener('message', (event) => {
-      if (!event.data) return;
-      const data = JSON.parse(event.data);
-      console.log('[STREAM]', data);
+        const { uci, ts } = msg.data;
+        console.log('Hora de recibido:', ts);
 
-      if (data.type === 'gameFull') {
-        console.log('[FULL]', data);
-      }
+        const from = uci.slice(0, 2);
+        const to = uci.slice(2, 4);
+        const promotion = uci.length === 5 ? uci[4] : undefined;
 
-      if (data.type === 'gameState') {
-        console.log('[STATE]', data);
+        gameRef.current.move({ from, to, promotion });
 
-        if (gameRef.current.turn() === opponentColor[0]) {
-          const moves = (data.moves as string).trim().split(' ');
-          const lastUci = moves[moves.length - 1];
-          if (!lastUci) return;
+        cgRef.current?.set({
+          fen: gameRef.current.fen(),
+          check: gameRef.current.isCheck(),
+          turnColor: gameRef.current.turn() === 'w' ? 'white' : 'black',
+          movable: { dests: buildDests(gameRef.current) },
+          lastMove: [from as Key, to as Key],
+        });
 
-          const from = lastUci.slice(0, 2);
-          const to = lastUci.slice(2, 4);
-          const promotion = lastUci.length === 5 ? lastUci[4] : undefined;
+        cgRef.current?.playPremove();
+      });
 
-          gameRef.current.move({ from, to, promotion });
+      return () => channel.unsubscribe();
+    }
 
-          cgRef.current?.set({
-            fen: gameRef.current.fen(),
-            check: gameRef.current.isCheck(),
-            turnColor: gameRef.current.turn() === 'w' ? 'white' : 'black',
-            movable: { dests: buildDests(gameRef.current) },
-            lastMove: [from as Key, to as Key],
-          });
+    if (stream === 'lichess') {
+      const es = new EventSource(
+        `/api/lichess/stream/${gameId}?user=${player}`
+      );
 
-          cgRef.current?.playPremove();
+      es.addEventListener('message', (event) => {
+        if (!event.data) return;
+        const data = JSON.parse(event.data);
+        console.log('[STREAM]', data);
+
+        if (data.type === 'gameFull') {
+          console.log('[FULL]', data);
         }
-      }
-    });
 
-    return () => es.close();
-  }, [gameId, player]);
+        if (data.type === 'gameState') {
+          console.log('[STATE]', data);
+
+          if (gameRef.current.turn() === opponentColor[0]) {
+            const moves = (data.moves as string).trim().split(' ');
+            const lastUci = moves[moves.length - 1];
+            if (!lastUci) return;
+
+            const from = lastUci.slice(0, 2);
+            const to = lastUci.slice(2, 4);
+            const promotion = lastUci.length === 5 ? lastUci[4] : undefined;
+
+            gameRef.current.move({ from, to, promotion });
+
+            cgRef.current?.set({
+              fen: gameRef.current.fen(),
+              check: gameRef.current.isCheck(),
+              turnColor: gameRef.current.turn() === 'w' ? 'white' : 'black',
+              movable: { dests: buildDests(gameRef.current) },
+              lastMove: [from as Key, to as Key],
+            });
+
+            cgRef.current?.playPremove();
+          }
+        }
+      });
+
+      return () => es.close();
+    }
+  }, [gameId, player, stream]);
 
   return (
     <Card>

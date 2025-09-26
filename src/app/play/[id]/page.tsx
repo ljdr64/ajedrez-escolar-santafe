@@ -17,7 +17,7 @@ export default function PlayPage() {
       <GameHeader />
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mt-6">
         <div className="lg:col-span-3">
-          <ChessBoard gameId={id} player={user} />
+          <ChessBoard gameId={id} player={user} stream={'ably'} />
         </div>
         <div className="lg:col-span-1">
           <GameSidebar />
